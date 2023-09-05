@@ -1,11 +1,12 @@
 import { create } from "zustand"
-import { devtools, persist } from "zustand/middleware"
+import { devtools, persist, subscribeWithSelector } from "zustand/middleware"
 // import { produce } from 'immer'
 
 
 const store = (set) => ({
     tasks: [],
     draggedTask: null,
+    taskInOngoing: 0,
     addTask: (title, state) => set(
         produce(store=> { store.tasks.push(title, state)}),//
         (store) => ({tasks: [...store.tasks, {title, state}]}),
@@ -32,4 +33,12 @@ const log = (config) => (set, get, api) => config(
     api
 )
 
-export const useStore = create(log(persist(devtools(store), {name: "store"})))
+export const useStore = create(subscribeWithSelector(log(persist(devtools(store), {name: "store"}))))
+
+useStore.subscribe(
+    (store) => store.tasks,
+    (newTasks, prevTasks) => {
+        useStore.setState({
+            taskInOngoing: newTasks.filter((task) => task.state === 'ONGOING').length,
+        })
+})
